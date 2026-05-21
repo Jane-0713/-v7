@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Source+Code+Pro:wght@400;600&display=swap');
+  :root{--primary:#2563a8;--primary-light:#3b82c4;--accent:#e8a020;--danger:#dc3545;--success:#28a745;--gray-dark:#2c2c2c;--gray-mid:#555;--gray-light:#888;--border:#d0d8e4;--bg:#f7f9fc;--white:#ffffff;--shadow:0 2px 12px rgba(37,99,168,0.08);}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--gray-dark);min-height:100vh;padding:20px 12px 40px;}
+  .container{max-width:820px;margin:0 auto;background:var(--white);border-radius:10px;box-shadow:var(--shadow);overflow:hidden;}
+  .form-header{text-align:center;padding:28px 24px 20px;border-bottom:2px solid var(--primary);background:linear-gradient(135deg,#f8fbff 0%,#eef4ff 100%);}
+  .form-header h1{font-size:1.7rem;font-weight:700;color:var(--primary);letter-spacing:3px;}
+  .form-header p{font-size:0.85rem;color:var(--gray-light);letter-spacing:2px;margin-top:4px;}
+  .form-body{padding:24px 28px;}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+  .form-group label{display:block;font-size:0.82rem;font-weight:600;color:var(--gray-mid);margin-bottom:5px;}
+  .form-group label .req{color:var(--danger);margin-left:2px;}
+  .form-group input,.form-group select{width:100%;border:1.5px solid var(--border);border-radius:6px;padding:8px 12px;font-size:0.88rem;font-family:'Noto Sans TC',sans-serif;color:var(--gray-dark);background:#fcfcfe;transition:border-color 0.2s,box-shadow 0.2s;outline:none;}
+  .form-group input:focus,.form-group select:focus{border-color:var(--primary-light);box-shadow:0 0 0 3px rgba(59,130,196,0.12);background:var(--white);}
+  .input-hint{font-size:0.72rem;color:var(--gray-light);margin-top:3px;}
+  .input-error{font-size:0.72rem;color:var(--danger);margin-top:3px;display:none;}
+  .section-title{font-size:0.9rem;font-weight:700;color:var(--primary);margin:20px 0 12px;display:flex;align-items:center;gap:6px;}
+  .section-title::before{content:'+';display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;background:var(--primary);color:white;border-radius:50%;font-size:0.8rem;font-weight:700;}
+  .add-row{display:grid;grid-template-columns:1fr 130px 1fr auto;gap:8px;align-items:center;margin-bottom:12px;}
+  .btn-add{background:#28a745;color:white;border:none;border-radius:6px;padding:8px 14px;font-size:0.82rem;font-family:'Noto Sans TC',sans-serif;font-weight:600;cursor:pointer;white-space:nowrap;transition:background 0.2s;display:flex;align-items:center;gap:4px;height:38px;}
+  .btn-add:hover{background:#218838;}
+  .expense-table{width:100%;border-collapse:collapse;font-size:0.85rem;}
+  .expense-table thead tr{background:var(--primary);color:white;}
+  .expense-table thead th{padding:10px 12px;text-align:left;font-weight:600;font-size:0.82rem;}
+  .expense-table thead th:first-child{width:40px;text-align:center;}
+  .expense-table tbody tr{border-bottom:1px solid var(--border);}
+  .expense-table tbody tr:hover{background:#f5f8ff;}
+  .expense-table td{padding:9px 12px;}
+  .expense-table td:first-child{text-align:center;color:var(--gray-light);font-size:0.8rem;}
+  .btn-delete{background:none;border:none;color:var(--danger);cursor:pointer;font-size:0.82rem;font-family:'Noto Sans TC',sans-serif;padding:2px 6px;border-radius:4px;}
+  .btn-delete:hover{background:#fff0f0;}
+  .total-row{display:flex;justify-content:space-between;align-items:center;background:#fffbf0;border:1px solid #f0c040;border-radius:6px;padding:11px 16px;margin-top:8px;font-weight:700;}
+  .total-label{display:flex;align-items:center;gap:6px;color:var(--accent);font-size:0.85rem;}
+  .total-label::before{content:'⚠';font-size:1rem;}
+  .total-amount{color:var(--gray-dark);font-family:'Source Code Pro',monospace;font-size:1rem;}
+  .notice-box{background:#fffbf0;border:1.5px solid #f0c040;border-radius:8px;padding:16px 20px;margin:20px 0;font-size:0.84rem;line-height:1.75;}
+  .notice-title{font-weight:700;font-size:0.92rem;color:#8a6000;margin-bottom:10px;}
+  .notice-steps{list-style:none;padding:0;color:var(--gray-mid);}
+  .notice-steps li{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;}
+  .notice-steps li:last-child{margin-bottom:0;}
+  .step-num{flex-shrink:0;width:22px;height:22px;background:var(--accent);color:white;border-radius:50%;font-size:0.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px;}
+
+  /* 簽核區 */
+  .sign-section{margin:24px 0 0;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;}
+  .sign-header{background:var(--primary);color:white;padding:10px 16px;font-size:0.88rem;font-weight:700;display:flex;align-items:center;justify-content:space-between;}
+  .sign-status{display:flex;align-items:center;gap:5px;font-size:0.78rem;}
+  .sign-dot{width:8px;height:8px;border-radius:50%;background:#aaa;}
+  .sign-dot.signed{background:#6fdb8a;}
+
+  /* 切換標籤 */
+  .sign-tabs{display:flex;border-bottom:1px solid var(--border);background:#f8faff;}
+  .sign-tab{flex:1;padding:10px;text-align:center;font-size:0.83rem;font-weight:600;color:var(--gray-mid);cursor:pointer;border:none;background:none;font-family:'Noto Sans TC',sans-serif;transition:background 0.15s,color 0.15s;border-bottom:3px solid transparent;}
+  .sign-tab.active{color:var(--primary);border-bottom:3px solid var(--primary);background:white;}
+  .sign-tab:hover:not(.active){background:#eef4ff;}
+
+  .sign-body{padding:16px;background:#fafcff;}
+  .sign-panel{display:none;}
+  .sign-panel.active{display:block;}
+
+  /* 手寫 */
+  .sign-canvas-wrap{position:relative;border:1.5px dashed var(--border);border-radius:6px;background:white;}
+  canvas#sigCanvas{display:block;width:100%;height:140px;cursor:crosshair;touch-action:none;border-radius:6px;}
+  .sign-placeholder{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#ccc;font-size:0.82rem;pointer-events:none;text-align:center;line-height:1.6;}
+
+  /* 上傳 */
+  .upload-area{border:2px dashed var(--border);border-radius:8px;padding:28px 20px;text-align:center;cursor:pointer;transition:border-color 0.2s,background 0.2s;background:white;position:relative;}
+  .upload-area:hover,.upload-area.dragover{border-color:var(--primary);background:#f0f6ff;}
+  .upload-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+  .upload-icon{font-size:2rem;margin-bottom:8px;}
+  .upload-text{font-size:0.85rem;color:var(--gray-mid);font-weight:600;}
+  .upload-hint{font-size:0.75rem;color:var(--gray-light);margin-top:4px;}
+  .upload-preview{margin-top:12px;display:none;text-align:center;}
+  .upload-preview img{max-height:120px;max-width:100%;border-radius:6px;border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,0.08);}
+  .upload-preview-name{font-size:0.75rem;color:var(--gray-light);margin-top:6px;}
+
+  .sign-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px;}
+  .btn-sign-clear{background:none;border:1px solid var(--border);border-radius:5px;padding:5px 12px;font-size:0.78rem;font-family:'Noto Sans TC',sans-serif;color:var(--gray-mid);cursor:pointer;}
+  .btn-sign-clear:hover{background:#f0f0f0;}
+
+  .gform-banner{background:#e8f0fe;border:1px solid #b3c9f8;border-radius:6px;padding:10px 14px;margin:14px 0;font-size:0.82rem;color:#1a56db;display:flex;align-items:center;gap:8px;}
+  .gform-banner a{color:var(--primary);font-weight:700;text-decoration:underline;}
+  .gform-banner::before{content:'🔗';font-size:1rem;flex-shrink:0;}
+  .action-bar{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:20px;padding-top:18px;border-top:1px solid var(--border);}
+  .btn{border:none;border-radius:6px;padding:10px 22px;font-size:0.85rem;font-family:'Noto Sans TC',sans-serif;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:opacity 0.2s,transform 0.1s;}
+  .btn:active{transform:scale(0.97);}
+  .btn:hover{opacity:0.88;}
+  .btn-danger{background:#dc3545;color:white;}
+  .btn-gray{background:#6c757d;color:white;}
+  .btn-success{background:#28a745;color:white;}
+  .btn-info{background:#17a2b8;color:white;}
+  .btn:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+  .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(80px);padding:12px 24px;border-radius:8px;font-size:0.88rem;font-weight:600;color:white;z-index:9999;transition:transform 0.35s ease,opacity 0.35s ease;opacity:0;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,0.18);}
+  .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+  .toast.success{background:#28a745;}
+  .toast.error{background:#dc3545;}
+  .toast.loading{background:#2563a8;}
+  @media(max-width:600px){
+    .form-row{grid-template-columns:1fr;}
+    .add-row{grid-template-columns:1fr 100px;}
+    .add-row .form-group:nth-child(3){display:none;}
+    .add-row .btn-add{grid-column:1/-1;justify-content:center;}
+  }
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="container">
+  <div class="form-header">
+    <h1>支出證明單</h1>
+    <p>Expenditure Voucher</p>
+  </div>
+  <div class="form-body">
+    <div class="form-row">
+      <div class="form-group">
+        <label>公司名稱 <span class="req">*</span></label>
+        <input type="text" id="companyName" placeholder="請輸入公司名稱">
+      </div>
+      <div class="form-group">
+        <label>公司統一編號 <span class="req">*</span></label>
+        <input type="text" id="taxId" placeholder="請輸入統一編號" maxlength="8" inputmode="numeric">
+        <div class="input-hint">8 碼數字</div>
+        <div class="input-error" id="taxIdError">統一編號需為 8 碼數字</div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>支出日期 <span class="req">*</span></label>
+        <input type="text" id="expenseDate" placeholder="114/05/06" maxlength="9" autocomplete="off" inputmode="numeric">
+        <div class="input-hint">格式：民國年/月/日，例 114/05/06</div>
+        <div class="input-error" id="dateError">日期格式不正確</div>
+      </div>
+      <div class="form-group"></div>
+    </div>
+
+    <div class="section-title">新增費用項目</div>
+    <div class="add-row">
+      <div class="form-group" style="margin:0">
+        <select id="newCategory">
+          <option value="">-- 請選擇 --</option>
+          <optgroup label="── 成本類 ──">
+            <option>進貨成本</option><option>勞務成本</option>
+          </optgroup>
+          <optgroup label="── 其他營業成本 ──">
+            <option>其他營業成本-文具用品</option><option>其他營業成本-旅費</option>
+            <option>其他營業成本-運費</option><option>其他營業成本-郵電費</option>
+            <option>其他營業成本-修繕費</option><option>其他營業成本-廣告費</option>
+            <option>其他營業成本-水電瓦斯費</option><option>其他營業成本-其他</option>
+            <option>其他營業成本-雜項購置</option><option>其他營業成本-交通費</option>
+            <option>其他營業成本-書報雜誌</option><option>其他營業成本-包裝費</option>
+          </optgroup>
+          <optgroup label="── 費用類 ──">
+            <option>文具用品</option><option>旅費</option><option>運費</option>
+            <option>郵電費</option><option>修繕費</option><option>廣告費</option>
+            <option>水電瓦斯費</option><option>其他費用</option><option>書報雜誌</option>
+            <option>雜項購置</option><option>交通費</option><option>燃料費</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="form-group" style="margin:0">
+        <input type="number" id="newAmount" placeholder="金額（元）" min="0" value="0">
+      </div>
+      <div class="form-group" style="margin:0">
+        <input type="text" id="newDesc" placeholder="費用說明（選填）">
+      </div>
+      <button class="btn-add" onclick="addItem()">+ 新增費用項目</button>
+    </div>
+
+    <table class="expense-table">
+      <thead><tr><th>#</th><th>品項類別</th><th>說明</th><th>金額</th><th>操作</th></tr></thead>
+      <tbody id="itemsBody">
+        <tr><td colspan="5" style="text-align:center;color:#aaa;padding:16px;">尚無費用項目</td></tr>
+      </tbody>
+    </table>
+
+    <div class="total-row">
+      <span class="total-label">費用合計</span>
+      <span class="total-amount" id="totalDisplay">NT$ 0</span>
+    </div>
+
+    <div class="gform-banner">
+      營端資訊：點此前往
+      <a href="https://docs.google.com/forms/d/e/1FAIpQLScseuc8h--v5wg0Q7uiCsf7wCYqIg0gC_4teg_QNMHqJ_LiWw/viewform" target="_blank">Google 表單線上填寫</a>
+      ，提交後資料將同步記錄至 dcrhcpa.jane@gmail.com
+    </div>
+
+    <div class="notice-box">
+      <div class="notice-title">⚠ 注意事項 Notice</div>
+      <ol class="notice-steps">
+        <li><span class="step-num">1</span><span>一張支出單據為<strong>當天應支出明細</strong>，請確認所有項目均屬同一日期之支出。</span></li>
+        <li><span class="step-num">2</span><span>當天支出明細填寫完成後，按下 <strong>「提交並儲存」</strong> 送出資料。</span></li>
+        <li><span class="step-num">3</span><span>儲存後，請在下方電子簽核區完成簽名（或列印後手寫簽名）。</span></li>
+        <li><span class="step-num">4</span><span>若使用<strong>手機填寫</strong>，須將網址複製到手機網頁，才會自動產生 PDF 檔。</span></li>
+      </ol>
+    </div>
+
+    <!-- 電子簽核 -->
+    <div class="sign-section">
+      <div class="sign-header">
+        <span>✍ 電子簽核</span>
+        <div class="sign-status">
+          <div class="sign-dot" id="signDot"></div>
+          <span id="signStatusText">尚未簽名</span>
+        </div>
+      </div>
+
+      <!-- 切換標籤 -->
+      <div class="sign-tabs">
+        <button class="sign-tab active" id="tabDraw" onclick="switchTab('draw')">✏️ 手寫簽名</button>
+        <button class="sign-tab" id="tabUpload" onclick="switchTab('upload')">🖼️ 上傳圖片</button>
+      </div>
+
+      <div class="sign-body">
+        <!-- 手寫面板 -->
+        <div class="sign-panel active" id="panelDraw">
+          <div class="sign-canvas-wrap">
+            <canvas id="sigCanvas"></canvas>
+            <div class="sign-placeholder" id="signPlaceholder">請在此處以滑鼠或手指簽名</div>
+          </div>
+          <div class="sign-actions">
+            <button class="btn-sign-clear" onclick="clearDraw()">✕ 清除</button>
+          </div>
+        </div>
+
+        <!-- 上傳面板 -->
+        <div class="sign-panel" id="panelUpload">
+          <div class="upload-area" id="uploadArea">
+            <input type="file" id="signFile" accept="image/*" onchange="handleUpload(event)">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">點擊或拖曳上傳簽名圖片</div>
+            <div class="upload-hint">支援 JPG、PNG、GIF（建議使用白底簽名圖）</div>
+          </div>
+          <div class="upload-preview" id="uploadPreview">
+            <img id="uploadedImg" src="" alt="簽名預覽">
+            <div class="upload-preview-name" id="uploadedName"></div>
+          </div>
+          <div class="sign-actions">
+            <button class="btn-sign-clear" onclick="clearUpload()">✕ 清除</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="action-bar">
+      <button class="btn btn-danger" onclick="clearItems()">🗑 清空項目</button>
+      <button class="btn btn-gray" onclick="resetAll()">✕ 全部重置</button>
+      <button class="btn btn-success" id="submitBtn" onclick="submitForm()">✔ 提交並儲存</button>
+      <button class="btn btn-info" onclick="window.print()">🖨 列印</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const WEBAPP_URL='https://script.google.com/macros/s/AKfycbzilsp3Py559Xov6YvB2k_zzXEBn6coJbb5WMBZ2zweYi_U9mfYXuBwDc2AyprN7cdSeA/exec';
+let items=[],counter=0;
+let signMode='draw'; // 'draw' | 'upload'
+let hasSigned=false;
+let uploadedImageData=null;
+
+// ── Toast ──
+function showToast(msg,type='success',duration=3000){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className=`toast ${type} show`;
+  setTimeout(()=>{t.className=`toast ${type}`;},duration);
+}
+
+function todayROC(){
+  const d=new Date();
+  return `${d.getFullYear()-1911}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ── 統一編號 ──
+(function(){
+  const el=document.getElementById('taxId');
+  el.addEventListener('keydown',e=>{
+    const allow=['Backspace','Delete','Tab','ArrowLeft','ArrowRight','Home','End'];
+    if(!allow.includes(e.key)&&!/^\d$/.test(e.key))e.preventDefault();
+  });
+  el.addEventListener('input',function(){
+    this.value=this.value.replace(/\D/g,'').slice(0,8);
+    document.getElementById('taxIdError').style.display=(this.value.length>0&&this.value.length<8)?'block':'none';
+  });
+})();
+
+// ── 支出日期 ──
+(function(){
+  const el=document.getElementById('expenseDate');
+  el.addEventListener('keydown',e=>{
+    const allow=['Backspace','Delete','Tab','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'];
+    if(!allow.includes(e.key)&&!/^\d$/.test(e.key)){e.preventDefault();return;}
+  });
+  el.addEventListener('input',function(){
+    let digits=this.value.replace(/\D/g,'').slice(0,7),f='';
+    for(let i=0;i<digits.length;i++){if(i===3||i===5)f+='/';f+=digits[i];}
+    this.value=f;
+    document.getElementById('dateError').style.display=(f.length===9&&!/^\d{3}\/\d{2}\/\d{2}$/.test(f))?'block':'none';
+  });
+})();
+
+// ── 費用項目 ──
+function addItem(){
+  const cat=document.getElementById('newCategory').value;
+  const amt=parseFloat(document.getElementById('newAmount').value)||0;
+  const desc=document.getElementById('newDesc').value.trim()||'-';
+  if(!cat){showToast('請選擇品項類別','error');return;}
+  if(amt<=0){showToast('請輸入有效金額','error');return;}
+  counter++;items.push({id:counter,cat,amt,desc});renderTable();
+  document.getElementById('newCategory').value='';
+  document.getElementById('newAmount').value=0;
+  document.getElementById('newDesc').value='';
+}
+function deleteItem(id){items=items.filter(i=>i.id!==id);renderTable();}
+function renderTable(){
+  const tbody=document.getElementById('itemsBody');
+  if(!items.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:#aaa;padding:16px;">尚無費用項目</td></tr>';document.getElementById('totalDisplay').textContent='NT$ 0';return;}
+  let total=0;
+  tbody.innerHTML=items.map((item,idx)=>{total+=item.amt;return `<tr><td>${idx+1}</td><td>${item.cat}</td><td>${item.desc}</td><td>NT$ ${item.amt.toLocaleString()}</td><td><button class="btn-delete" onclick="deleteItem(${item.id})">✕ 刪除</button></td></tr>`;}).join('');
+  document.getElementById('totalDisplay').textContent=`NT$ ${total.toLocaleString()}`;
+}
+function clearItems(){if(!confirm('確定要清空所有費用項目？'))return;items=[];counter=0;renderTable();}
+function resetAll(){
+  if(!confirm('確定要重置所有資料？'))return;
+  document.getElementById('companyName').value='';
+  document.getElementById('taxId').value='';
+  document.getElementById('expenseDate').value=todayROC();
+  document.getElementById('dateError').style.display='none';
+  document.getElementById('taxIdError').style.display='none';
+  items=[];counter=0;renderTable();
+  clearDraw();clearUpload();updateSignStatus(false);
+}
+
+// ── 簽核標籤切換 ──
+function switchTab(mode){
+  signMode=mode;
+  document.getElementById('tabDraw').classList.toggle('active',mode==='draw');
+  document.getElementById('tabUpload').classList.toggle('active',mode==='upload');
+  document.getElementById('panelDraw').classList.toggle('active',mode==='draw');
+  document.getElementById('panelUpload').classList.toggle('active',mode==='upload');
+  // 切換時重新評估簽名狀態
+  if(mode==='draw') updateSignStatus(drawHasSigned);
+  else updateSignStatus(uploadedImageData!==null);
+}
+
+function updateSignStatus(signed){
+  hasSigned=signed;
+  document.getElementById('signDot').classList.toggle('signed',signed);
+  document.getElementById('signStatusText').textContent=signed?'已簽名':'尚未簽名';
+}
+
+// ── 手寫簽名 ──
+const canvas=document.getElementById('sigCanvas');
+const ctx=canvas.getContext('2d');
+let drawing=false,drawHasSigned=false;
+
+function resizeCanvas(){
+  const ratio=window.devicePixelRatio||1,rect=canvas.getBoundingClientRect();
+  canvas.width=rect.width*ratio;canvas.height=rect.height*ratio;
+  ctx.scale(ratio,ratio);ctx.strokeStyle='#1a3a6b';ctx.lineWidth=2.2;ctx.lineCap='round';ctx.lineJoin='round';
+}
+function getPos(e){const rect=canvas.getBoundingClientRect(),src=e.touches?e.touches[0]:e;return{x:src.clientX-rect.left,y:src.clientY-rect.top};}
+function startDraw(e){e.preventDefault();drawing=true;const p=getPos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);}
+function draw(e){
+  if(!drawing)return;e.preventDefault();
+  const p=getPos(e);ctx.lineTo(p.x,p.y);ctx.stroke();
+  if(!drawHasSigned){
+    drawHasSigned=true;
+    document.getElementById('signPlaceholder').style.display='none';
+    if(signMode==='draw') updateSignStatus(true);
+  }
+}
+function endDraw(){drawing=false;ctx.beginPath();}
+canvas.addEventListener('mousedown',startDraw);canvas.addEventListener('mousemove',draw);
+canvas.addEventListener('mouseup',endDraw);canvas.addEventListener('mouseleave',endDraw);
+canvas.addEventListener('touchstart',startDraw,{passive:false});canvas.addEventListener('touchmove',draw,{passive:false});canvas.addEventListener('touchend',endDraw);
+
+function clearDraw(){
+  const rect=canvas.getBoundingClientRect();ctx.clearRect(0,0,rect.width,rect.height);
+  drawHasSigned=false;
+  document.getElementById('signPlaceholder').style.display='block';
+  if(signMode==='draw') updateSignStatus(false);
+}
+
+// ── 上傳圖片 ──
+const uploadArea=document.getElementById('uploadArea');
+uploadArea.addEventListener('dragover',e=>{e.preventDefault();uploadArea.classList.add('dragover');});
+uploadArea.addEventListener('dragleave',()=>uploadArea.classList.remove('dragover'));
+uploadArea.addEventListener('drop',e=>{
+  e.preventDefault();uploadArea.classList.remove('dragover');
+  const file=e.dataTransfer.files[0];
+  if(file&&file.type.startsWith('image/')) loadUploadedImage(file);
+});
+
+function handleUpload(e){
+  const file=e.target.files[0];
+  if(file) loadUploadedImage(file);
+}
+
+function loadUploadedImage(file){
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    uploadedImageData=ev.target.result;
+    document.getElementById('uploadedImg').src=uploadedImageData;
+    document.getElementById('uploadedName').textContent=file.name;
+    document.getElementById('uploadPreview').style.display='block';
+    if(signMode==='upload') updateSignStatus(true);
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearUpload(){
+  uploadedImageData=null;
+  document.getElementById('uploadedImg').src='';
+  document.getElementById('uploadedName').textContent='';
+  document.getElementById('uploadPreview').style.display='none';
+  document.getElementById('signFile').value='';
+  if(signMode==='upload') updateSignStatus(false);
+}
+
+// ── 取得簽名圖片 ──
+function getSignatureDataUrl(){
+  if(signMode==='draw') return drawHasSigned ? canvas.toDataURL('image/png') : null;
+  return uploadedImageData||null;
+}
+
+// ── 產製 PDF ──
+async function generatePDF(company,taxId,date,itemsData){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const pw=doc.internal.pageSize.getWidth();
+  const W=1240,H=1754;
+  const off=document.createElement('canvas');off.width=W;off.height=H;
+  const oc=off.getContext('2d');
+  oc.fillStyle='#ffffff';oc.fillRect(0,0,W,H);
+  oc.fillStyle='#eef4ff';oc.fillRect(0,0,W,110);
+  oc.strokeStyle='#2563a8';oc.lineWidth=4;oc.beginPath();oc.moveTo(0,110);oc.lineTo(W,110);oc.stroke();
+  oc.fillStyle='#2563a8';oc.font='bold 52px sans-serif';oc.textAlign='center';oc.fillText('支出證明單',620,68);
+  oc.fillStyle='#888';oc.font='24px sans-serif';oc.fillText('Expenditure Voucher',620,98);
+  let y=160;oc.textAlign='left';
+  const lbl=(t,x,yy)=>{oc.fillStyle='#555';oc.font='bold 24px sans-serif';oc.fillText(t,x,yy);};
+  const val=(t,x,yy)=>{oc.fillStyle='#1a1a1a';oc.font='26px sans-serif';oc.fillText(t,x,yy);};
+  lbl('公司名稱',60,y);val(company,200,y);lbl('統一編號',660,y);val(taxId,800,y);y+=50;
+  lbl('支出日期',60,y);val(date,200,y);
+  y+=30;oc.strokeStyle='#d0d8e4';oc.lineWidth=1;oc.beginPath();oc.moveTo(40,y);oc.lineTo(W-40,y);oc.stroke();y+=30;
+  oc.fillStyle='#2563a8';oc.fillRect(40,y,W-80,46);
+  oc.fillStyle='#fff';oc.font='bold 23px sans-serif';oc.textAlign='center';
+  oc.fillText('#',90,y+31);oc.fillText('品項類別 / 會計科目',370,y+31);oc.fillText('說明',730,y+31);
+  oc.textAlign='right';oc.fillText('金額',W-60,y+31);y+=46;
+  let total=0;
+  itemsData.forEach((item,idx)=>{
+    total+=item.amt;
+    oc.fillStyle=idx%2===0?'#f5f8ff':'#ffffff';oc.fillRect(40,y,W-80,44);
+    oc.strokeStyle='#d0d8e4';oc.lineWidth=0.5;oc.strokeRect(40,y,W-80,44);
+    oc.fillStyle='#333';oc.font=item.cat.length>10?'19px sans-serif':'22px sans-serif';oc.textAlign='center';
+    oc.fillText(String(idx+1),90,y+29);oc.fillText(item.cat,370,y+29);
+    oc.font='22px sans-serif';oc.fillText(item.desc==='-'?'—':item.desc,730,y+29);
+    oc.textAlign='right';oc.fillText(`NT$ ${item.amt.toLocaleString()}`,W-60,y+29);y+=44;
+  });
+  y+=8;oc.fillStyle='#fffbf0';oc.fillRect(40,y,W-80,48);oc.strokeStyle='#f0c040';oc.lineWidth=1.5;oc.strokeRect(40,y,W-80,48);
+  oc.fillStyle='#8a6000';oc.font='bold 26px sans-serif';oc.textAlign='left';oc.fillText('費用合計',60,y+33);
+  oc.fillStyle='#1a1a1a';oc.textAlign='right';oc.fillText(`NT$ ${total.toLocaleString()}`,W-60,y+33);y+=66;
+  // 簽核區
+  oc.fillStyle='#2563a8';oc.fillRect(40,y,W-80,46);
+  oc.fillStyle='#fff';oc.font='bold 26px sans-serif';oc.textAlign='left';
+  const modeLabel=signMode==='upload'?'電子簽核（圖片上傳）':'電子簽核（手寫）';
+  oc.fillText('✍ '+modeLabel,60,y+32);y+=46;
+  const sigH=200;oc.strokeStyle='#d0d8e4';oc.lineWidth=1.5;oc.strokeRect(40,y,W-80,sigH);
+  const sigData=getSignatureDataUrl();
+  if(sigData){
+    const sigImg=new Image();sigImg.src=sigData;
+    await new Promise(res=>{sigImg.onload=res;sigImg.onerror=res;});
+    // 等比例置中
+    const ratio=Math.min((W-80)/sigImg.width,sigH/sigImg.height)*0.9;
+    const sw=sigImg.width*ratio,sh=sigImg.height*ratio;
+    const sx=40+(W-80-sw)/2,sy=y+(sigH-sh)/2;
+    oc.drawImage(sigImg,sx,sy,sw,sh);
+  } else {
+    oc.fillStyle='#bbb';oc.font='24px sans-serif';oc.textAlign='center';oc.fillText('（未簽名）',620,y+110);
+  }
+  const imgData=off.toDataURL('image/png');
+  doc.addImage(imgData,'PNG',0,0,pw,(off.height/off.width)*pw);
+  doc.save(`支出證明單_${company}_${date.replace(/\//g,'')}.pdf`);
+}
+
+// ── 提交 ──
+async function submitForm(){
+  const company=document.getElementById('companyName').value.trim();
+  const taxId=document.getElementById('taxId').value.trim();
+  const date=document.getElementById('expenseDate').value;
+  if(!company){showToast('請填寫公司名稱','error');return;}
+  if(!/^\d{8}$/.test(taxId)){showToast('請輸入正確的統一編號（8碼數字）','error');return;}
+  if(!/^\d{3}\/\d{2}\/\d{2}$/.test(date)){showToast('請輸入正確的支出日期格式，如 114/05/06','error');return;}
+  if(!items.length){showToast('請新增至少一項費用項目','error');return;}
+  if(!hasSigned){showToast('請先完成電子簽核後再提交','error');return;}
+
+  const btn=document.getElementById('submitBtn');
+  btn.disabled=true;btn.textContent='⏳ 提交中...';
+  showToast('⏳ 資料傳送中，請稍候...','loading',10000);
+
+  try{
+    await fetch(WEBAPP_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({companyName:company,taxId,expenseDate:date,items})});
+    showToast('✅ 寫入成功，正在產製 PDF...','success',3000);
+    await generatePDF(company,taxId,date,items);
+    showToast('✅ PDF 已下載！','success',3000);
+    setTimeout(()=>{
+      items=[];counter=0;renderTable();
+      document.getElementById('companyName').value='';
+      document.getElementById('taxId').value='';
+      document.getElementById('expenseDate').value=todayROC();
+      clearDraw();clearUpload();updateSignStatus(false);
+    },1800);
+  }catch(err){
+    showToast('❌ 提交失敗，請確認網路連線後再試','error',4000);
+  }finally{
+    btn.disabled=false;btn.innerHTML='✔ 提交並儲存';
+  }
+}
+
+window.addEventListener('load',resizeCanvas);
+window.addEventListener('resize',resizeCanvas);
+document.getElementById('expenseDate').value=todayROC();
+</script>
+</body>
+</html>
